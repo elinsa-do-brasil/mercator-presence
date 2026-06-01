@@ -91,7 +91,7 @@ pub fn sha256_base64url(data: &[u8]) -> String {
 /// ```text
 /// MERCATOR-V1
 /// POST
-/// /api/tropic-of-cancer/heartbeat
+/// /api/tropic/heartbeat
 /// {device_id}
 /// {device_key_id}
 /// {timestamp}
@@ -108,7 +108,7 @@ pub fn build_canonical_string(
     body_sha256_base64url: &str,
 ) -> String {
     format!(
-        "MERCATOR-V1\nPOST\n/api/tropic-of-cancer/heartbeat\n{device_id}\n{device_key_id}\n{timestamp}\n{nonce}\n{body_sha256_base64url}"
+        "MERCATOR-V1\nPOST\n/api/tropic/heartbeat\n{device_id}\n{device_key_id}\n{timestamp}\n{nonce}\n{body_sha256_base64url}"
     )
 }
 
@@ -190,7 +190,7 @@ mod tests {
         assert_eq!(lines.len(), 8);
         assert_eq!(lines[0], "MERCATOR-V1");
         assert_eq!(lines[1], "POST");
-        assert_eq!(lines[2], "/api/tropic-of-cancer/heartbeat");
+        assert_eq!(lines[2], "/api/tropic/heartbeat");
         assert_eq!(lines[3], "dev_01J");
         assert_eq!(lines[4], "devkey_01J");
     }

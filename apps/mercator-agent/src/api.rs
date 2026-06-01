@@ -15,8 +15,8 @@ use crate::types::{
     ClaimRequest, ClaimResponse, HeartbeatRequest, HeartbeatResponse, SignatureHeaders,
 };
 
-const CLAIM_ENDPOINT: &str = "/api/tropic-of-cancer/claim";
-const HEARTBEAT_ENDPOINT: &str = "/api/tropic-of-cancer/heartbeat";
+const CLAIM_ENDPOINT: &str = "/api/tropic/claim";
+const HEARTBEAT_ENDPOINT: &str = "/api/tropic/heartbeat";
 /// Proteção contra pacotes gigantescos! O servidor limita as requisições a 64 KB.
 const MAX_PAYLOAD_BYTES: usize = 64 * 1024;
 const AGENT_VERSION_HEADER: &str = "X-Mercator-Agent-Version";
@@ -41,7 +41,7 @@ pub enum ApiError {
 /// **Como funciona, patinho?**
 /// 1. Nós convertemos o `ClaimRequest` em bytes usando a biblioteca JSON.
 /// 2. Conferimos se o pacote não ultrapassa os 64 KB de segurança.
-/// 3. Fazemos um `POST` para o endpoint `/api/tropic-of-cancer/claim`.
+/// 3. Fazemos um `POST` para o endpoint `/api/tropic/claim`.
 /// 4. Usamos um token estático especial no cabeçalho: `Authorization: Bearer <HANDSHAKE_KEY>`
 ///    para provar que o nosso instalador tem autoridade!
 /// 5. Se o servidor disser "ok: true", retornamos o `ClaimResponse` contendo o nosso ID definitivo!
@@ -167,11 +167,11 @@ mod tests {
         // Garantimos que a junção da URL funciona perfeitamente mesmo se a URL vier com barra final!
         assert_eq!(
             endpoint("https://mercator.example.com/", CLAIM_ENDPOINT),
-            "https://mercator.example.com/api/tropic-of-cancer/claim"
+            "https://mercator.example.com/api/tropic/claim"
         );
         assert_eq!(
             endpoint("https://mercator.example.com/", HEARTBEAT_ENDPOINT),
-            "https://mercator.example.com/api/tropic-of-cancer/heartbeat"
+            "https://mercator.example.com/api/tropic/heartbeat"
         );
     }
 
@@ -180,7 +180,7 @@ mod tests {
         // E também se a URL vier limpa sem barra final!
         assert_eq!(
             endpoint("https://mercator.example.com", HEARTBEAT_ENDPOINT),
-            "https://mercator.example.com/api/tropic-of-cancer/heartbeat"
+            "https://mercator.example.com/api/tropic/heartbeat"
         );
     }
 }

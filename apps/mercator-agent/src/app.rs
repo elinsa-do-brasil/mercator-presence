@@ -164,10 +164,13 @@ pub async fn claim(authorization_code: &str) -> Result<()> {
     // Coleta dados básicos do computador para o servidor saber quem somos nós fisicamente!
     let snapshot = collector::collect_system_info();
 
-    let location_key_id = if embedded::LOCATION_PUBLIC_KEY_ID.is_empty() {
-        "none".to_string()
+    let location_encryption = if embedded::LOCATION_PUBLIC_KEY_ID.is_empty() || embedded::LOCATION_PUBLIC_KEY.is_empty() {
+        None
     } else {
-        embedded::LOCATION_PUBLIC_KEY_ID.to_string()
+        Some(LocationEncryptionInfo {
+            key_id: embedded::LOCATION_PUBLIC_KEY_ID.to_string(),
+            algorithm: "HPKE-X25519-HKDF-SHA256-AES256GCM".to_string(),
+        })
     };
 
     // Monta o pacote de requisição do claim.
@@ -182,15 +185,12 @@ pub async fn claim(authorization_code: &str) -> Result<()> {
             platform: current_platform(),
         },
         signing_public_key: SigningPublicKey {
-            key_id: String::new(), // O servidor criará e atribuirá um ID para a chave pública.
+            key_id: None, // O servidor criará e atribuirá um ID para a chave pública.
             algorithm: "ed25519".to_string(),
             encoding: "base64url".to_string(),
             value: public_key_b64,
         },
-        location_encryption: LocationEncryptionInfo {
-            key_id: location_key_id,
-            algorithm: "HPKE-X25519-HKDF-SHA256-AES256GCM".to_string(),
-        },
+        location_encryption,
         collected_at: time::OffsetDateTime::now_utc(),
     };
 

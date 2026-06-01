@@ -13,7 +13,7 @@ pub enum ClaimKind {
     Claim,
 }
 
-/// O pacote de dados (Payload) que enviamos no `POST /api/tropic-of-cancer/claim`.
+/// O pacote de dados (Payload) que enviamos no `POST /api/tropic/claim`.
 /// É o formulário de registro do dispositivo! Ele envia as informações coletadas pelo instalador,
 /// os dados básicos do computador, a nossa chave pública Ed25519 recém-gerada,
 /// e a informação sobre a chave de localização que conhecemos.
@@ -35,7 +35,8 @@ pub struct ClaimRequest {
     /// todas as assinaturas que enviarmos a partir de agora!
     pub signing_public_key: SigningPublicKey,
     /// Detalhes sobre a chave de localização que o agente conhece, para o servidor saber se está atualizada.
-    pub location_encryption: LocationEncryptionInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location_encryption: Option<LocationEncryptionInfo>,
     /// O momento exato (carimbado com data e hora UTC) em que coletamos estes dados.
     #[serde(with = "time::serde::rfc3339")]
     pub collected_at: OffsetDateTime,
@@ -50,7 +51,8 @@ pub struct ClaimRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SigningPublicKey {
-    pub key_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_id: Option<String>,
     pub algorithm: String,
     pub encoding: String,
     pub value: String,
@@ -65,7 +67,7 @@ pub struct LocationEncryptionInfo {
     pub algorithm: String,
 }
 
-/// A resposta que o servidor nos devolve após fazermos um `POST /api/tropic-of-cancer/claim` de sucesso.
+/// A resposta que o servidor nos devolve após fazermos um `POST /api/tropic/claim` de sucesso.
 /// Ela contém:
 /// - `ok`: verdadeiro se deu tudo certo.
 /// - `device_id`: o ID definitivo que o servidor deu para este computador.
@@ -373,7 +375,7 @@ fn is_valid_mac(value: &str) -> bool {
 
 /// Patinho, este struct especial reúne todos os cabeçalhos de assinatura criptográfica
 /// exigidos pelo nosso protocolo de segurança no envio de batimentos cardíacos!
-/// Quando enviamos a requisição HTTP `POST /api/tropic-of-cancer/heartbeat`, nós injetamos
+/// Quando enviamos a requisição HTTP `POST /api/tropic/heartbeat`, nós injetamos
 /// estas cinco strings nos cabeçalhos da mensagem:
 /// - `device_id`: prova quem somos nós.
 /// - `device_key_id`: indica qual chave pública no servidor deve ser usada para verificar.
@@ -474,15 +476,15 @@ mod tests {
                 platform: AgentPlatform::Windows,
             },
             signing_public_key: SigningPublicKey {
-                key_id: "local_generated".to_string(),
+                key_id: Some("local_generated".to_string()),
                 algorithm: "ed25519".to_string(),
                 encoding: "base64url".to_string(),
                 value: "PUBLIC_KEY_BASE64URL".to_string(),
             },
-            location_encryption: LocationEncryptionInfo {
+            location_encryption: Some(LocationEncryptionInfo {
                 key_id: "loc_2026_01".to_string(),
                 algorithm: "HPKE-X25519-HKDF-SHA256-AES256GCM".to_string(),
-            },
+            }),
             collected_at: OffsetDateTime::from_unix_timestamp(1_780_228_800).unwrap(),
         };
 

@@ -10,6 +10,7 @@
 
 /// Patinho, esta é a URL do servidor Mercator para onde enviaremos todas as informações.
 /// Ela é extraída direto de `MERCATOR_SERVER_URL` na compilação.
+// Alterado para forçar a recompilação novamente com a correção do build.rs!
 pub const SERVER_URL: &str = env!("MERCATOR_SERVER_URL");
 
 /// Esta é a chave secreta de Handshake (aperto de mão).
@@ -25,7 +26,14 @@ pub const LOCATION_PUBLIC_KEY_ID: &str = env!("MERCATOR_LOCATION_PUBLIC_KEY_ID")
 /// Nós a usaremos no futuro para trancar a localização do usuário com criptografia assimétrica,
 /// de modo que apenas o servidor central do Mercator consiga abrir e ver a geolocalização!
 #[allow(dead_code)]
-pub const LOCATION_PUBLIC_KEY: &str = env!("MERCATOR_LOCATION_PUBLIC_KEY");
+pub const LOCATION_PUBLIC_KEY: &str = {
+    let pk = env!("MERCATOR_LOCATION_PUBLIC_KEY");
+    if !pk.is_empty() {
+        pk
+    } else {
+        env!("MERCATOR_LOCATION_PUBLIC_KEY_BASE64")
+    }
+};
 
 /// Patinho, esta função valida se as configurações mínimas para o funcionamento básico
 /// do agente estão presentes.
@@ -49,8 +57,10 @@ pub fn validate_embedded_config() -> Result<(), String> {
     } else {
         // Xi, patinho... Está faltando coisa essencial!
         Err(format!(
-            "missing build-time variables: {}. Rebuild with a valid .env file.",
-            missing.join(", ")
+            "missing build-time variables: {}. Rebuild with a valid .env file. (SERVER_URL='{}', HANDSHAKE_KEY='{}')",
+            missing.join(", "),
+            SERVER_URL,
+            HANDSHAKE_KEY
         ))
     }
 }
