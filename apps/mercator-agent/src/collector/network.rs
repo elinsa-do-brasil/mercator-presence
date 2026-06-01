@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv6Addr};
 
 use sysinfo::{MacAddr, Networks};
 
-use crate::types::NetworkInfo;
+use crate::types::{NetworkInfo, NetworkType};
 
 pub fn collect_network_info() -> NetworkInfo {
     let networks = Networks::new_with_refreshed_list();
@@ -11,6 +11,8 @@ pub fn collect_network_info() -> NetworkInfo {
     let mut mac_addresses = BTreeSet::new();
     let mut saw_wifi = false;
     let mut saw_ethernet = false;
+    let mut saw_vpn = false;
+    let mut saw_cellular = false;
 
     for (interface_name, network) in &networks {
         let lower_name = interface_name.to_ascii_lowercase();
@@ -20,6 +22,14 @@ pub fn collect_network_info() -> NetworkInfo {
         saw_ethernet |= lower_name.contains("ethernet")
             || lower_name.starts_with("eth")
             || lower_name.starts_with("en");
+        saw_vpn |= lower_name.contains("vpn")
+            || lower_name.contains("wireguard")
+            || lower_name.contains("openvpn")
+            || lower_name.contains("tailscale")
+            || lower_name.contains("tap");
+        saw_cellular |= lower_name.contains("cellular")
+            || lower_name.contains("wwan")
+            || lower_name.contains("mobile broadband");
 
         let mac = network.mac_address();
         if !mac.is_unspecified() {
@@ -34,21 +44,27 @@ pub fn collect_network_info() -> NetworkInfo {
     }
 
     NetworkInfo {
-        network_type: network_type(saw_wifi, saw_ethernet),
+        network_type: network_type(saw_wifi, saw_ethernet, saw_vpn, saw_cellular),
         private_ips: private_ips.into_iter().collect(),
         mac_addresses: mac_addresses.into_iter().collect(),
         gateway_ip: None,
         ssid: None,
         bssid_hash: None,
-        public_ip_seen_by_server: None,
     }
 }
 
-fn network_type(saw_wifi: bool, saw_ethernet: bool) -> String {
-    match (saw_wifi, saw_ethernet) {
-        (true, _) => "wifi".to_string(),
-        (false, true) => "ethernet".to_string(),
-        (false, false) => "unknown".to_string(),
+fn network_type(
+    saw_wifi: bool,
+    saw_ethernet: bool,
+    saw_vpn: bool,
+    saw_cellular: bool,
+) -> NetworkType {
+    match (saw_vpn, saw_wifi, saw_ethernet, saw_cellular) {
+        (true, _, _, _) => NetworkType::Vpn,
+        (false, true, _, _) => NetworkType::Wifi,
+        (false, false, true, _) => NetworkType::Ethernet,
+        (false, false, false, true) => NetworkType::Cellular,
+        (false, false, false, false) => NetworkType::Unknown,
     }
 }
 
