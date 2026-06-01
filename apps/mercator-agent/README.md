@@ -1,19 +1,19 @@
 # Mercator Agent
 
-Mercator Agent is the Windows-focused Rust agent for Mercator device inventory and presence. The MVP enrolls a device, stores its device credentials locally, sends heartbeats, and prepares contracts for future internal messages without adding UI to the service.
+Mercator Agent e o agent Rust, com foco em Windows, para inventario e presenca de dispositivos no Mercator. O MVP coleta dados basicos do computador e envia heartbeats para a API de ingestao.
 
-## What It Collects
+## O Que Ele Coleta
 
-- Hostname and current user.
-- Manufacturer, model, serial number when the OS exposes them.
-- OS name/version, CPU brand, memory usage, and uptime.
-- Local private IPs and MAC addresses.
-- Battery fields as nullable placeholders for the MVP.
-- Agent version and collection timestamp.
+- Hostname e usuario atual.
+- Fabricante, modelo e serial quando o sistema operacional expuser esses dados.
+- Nome, versao/build do sistema operacional, CPU, memoria e uptime.
+- IPs privados locais e MACs validos das interfaces.
+- Campos de bateria como nulos no MVP.
+- Versao do agent, plataforma e horario da coleta.
 
-## What It Does Not Collect
+## O Que Ele Nao Coleta
 
-- User files, documents, photos, browser history, passwords, clipboard, keystrokes, screenshots, open windows, detailed process lists, precise geolocation, packet contents, remote shell, remote commands, or arbitrary download/execute behavior.
+Arquivos do usuario, documentos, fotos, historico de navegador, senhas, clipboard, teclas, prints, janelas abertas, lista detalhada de processos, geolocalizacao precisa, conteudo de rede, shell remoto, comandos remotos ou download/execucao arbitraria.
 
 ## Build
 
@@ -21,59 +21,64 @@ Mercator Agent is the Windows-focused Rust agent for Mercator device inventory a
 cargo build --release -p mercator-agent
 ```
 
-From this directory:
+Dentro desta pasta:
 
 ```powershell
 cargo build --release
 ```
 
-## Foreground Run
+## Configuracao
 
 ```powershell
-.\target\release\mercator-agent.exe run
+.\target\release\mercator-agent.exe configure --server-url "https://mercator.exemplo.com.br" --api-key "tc_live_xxxxx_SECRET"
 ```
 
-Foreground mode loads config, sends a heartbeat immediately, and continues the heartbeat loop.
-
-## Enrollment
+`enroll` continua aceito como alias de compatibilidade, mas o contrato atual usa `API_KEY`, nao enrollment token:
 
 ```powershell
-.\target\release\mercator-agent.exe enroll --server-url "https://mercator.exemplo.com.br" --token "ENROLL_TOKEN"
+.\target\release\mercator-agent.exe enroll --server-url "https://mercator.exemplo.com.br" --token "tc_live_xxxxx_SECRET"
 ```
 
-The enrollment token is sent once and is never saved. The returned `deviceId`, `deviceToken`, and optional heartbeat interval are saved to config.
+A chave e salva no config local e nunca deve aparecer inteira em logs ou comandos de visualizacao.
 
-## Test Heartbeat
+## Heartbeat De Teste
 
 ```powershell
 .\target\release\mercator-agent.exe heartbeat-once
 ```
 
-This prints hostname, serial, current user, local private IPs, and send status. Tokens are not printed.
+O comando coleta os dados, envia uma chamada para `/api/tropic-of-cancer` e imprime hostname, serial, usuario atual, IPs privados, status do envio e `deviceId` retornado pelo servidor.
 
-## Config
+## Execucao Em Foreground
 
-Windows path:
+```powershell
+.\target\release\mercator-agent.exe run
+```
+
+O modo foreground carrega o config, envia um heartbeat ao iniciar e continua no loop usando `heartbeatIntervalSeconds`.
+
+## Config Local
+
+Windows:
 
 ```text
 C:\ProgramData\Mercator\Agent\config.json
 ```
 
-Non-Windows development uses a safe user config directory, or `MERCATOR_AGENT_HOME` when set.
+Fora do Windows, o agent usa um diretorio seguro de desenvolvimento, ou `MERCATOR_AGENT_HOME` quando definido.
 
-Example:
+Exemplo:
 
 ```json
 {
   "serverUrl": "https://mercator.exemplo.com.br",
-  "deviceId": "dev_xxx",
-  "deviceToken": "token_emitido_pelo_servidor",
+  "apiKey": "tc_live_xxxxx_SECRET",
   "heartbeatIntervalSeconds": 900,
   "agentVersion": "0.1.0"
 }
 ```
 
-Show masked config:
+Visualizar com segredo mascarado:
 
 ```powershell
 .\target\release\mercator-agent.exe config show
@@ -81,17 +86,41 @@ Show masked config:
 
 ## Logs
 
-Windows path:
+Windows:
 
 ```text
 C:\ProgramData\Mercator\Agent\logs\agent.log
 ```
 
-Logs must not contain full tokens. Network/API errors are summarized.
+Logs nao devem conter tokens completos. Erros de rede/API sao resumidos.
+
+## Contrato Da API
+
+Heartbeat:
+
+```http
+POST /api/tropic-of-cancer
+Authorization: Bearer <API_KEY>
+Content-Type: application/json
+X-Mercator-Agent-Version: 0.1.0
+```
+
+O payload segue o contrato de ingestao com `kind: "heartbeat"` e blocos `device`, `user`, `agent`, `system`, `network`, `battery` e `collectedAt`. O agent valida que existe ao menos um identificador forte antes do envio: serial, MAC valido ou `hostname + manufacturer + model`.
+
+O servidor deve responder:
+
+```json
+{
+  "ok": true,
+  "deviceId": "uuid-do-dispositivo",
+  "receivedAt": "2026-05-31T12:00:00.000Z",
+  "serverTime": "2026-05-31T12:00:00.100Z"
+}
+```
 
 ## Windows Service
 
-Run these commands from an elevated PowerShell:
+Execute em um PowerShell elevado:
 
 ```powershell
 .\target\release\mercator-agent.exe service install
@@ -100,40 +129,15 @@ Run these commands from an elevated PowerShell:
 .\target\release\mercator-agent.exe service uninstall
 ```
 
-Service metadata:
+Metadados do servico:
 
 - Service name: `MercatorAgent`
 - Display name: `Mercator Agent`
 - Description: `Mercator device inventory and presence agent`
 
-Uninstall does not delete config.
+`service uninstall` nao apaga o config.
 
-## Endpoints
-
-Enrollment:
-
-```http
-POST /api/agent/enroll
-Authorization: Bearer <ENROLLMENT_TOKEN>
-Content-Type: application/json
-```
-
-Heartbeat:
-
-```http
-POST /api/agent/heartbeat
-Authorization: Bearer <DEVICE_TOKEN>
-Content-Type: application/json
-```
-
-Future message contracts, not implemented in the service UI:
-
-```http
-GET /api/agent/messages/poll
-POST /api/agent/messages/:id/ack
-```
-
-## Development Checks
+## Verificacoes De Desenvolvimento
 
 ```bash
 cargo fmt
@@ -141,15 +145,14 @@ cargo test -p mercator-agent
 cargo check -p mercator-agent
 ```
 
-## Next Steps
+## Proximos Passos
 
-1. Auto-update with signed binaries.
-2. MSI installer.
-3. Separate notifier for HTML messages using Tauri/WebView2.
-4. `/api/agent/messages/poll`.
-5. `/api/agent/messages/:id/ack`.
-6. Backend location inference from known networks.
-7. Mercator presence map.
-8. Presence event retention policies.
-9. Binary signing/codesign.
-10. Build and release via GitHub Actions.
+1. Auto-update com binarios assinados.
+2. Instalador MSI.
+3. Notifier separado para mensagens HTML usando Tauri/WebView2.
+4. Endpoints futuros de mensagens.
+5. Inferencia de localizacao no backend por redes conhecidas.
+6. Mapa de presenca no Mercator.
+7. Politicas de retencao de eventos de presenca.
+8. Assinatura de binario/codesign.
+9. Build/release via GitHub Actions.

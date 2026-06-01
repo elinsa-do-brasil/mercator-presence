@@ -2,13 +2,18 @@
 name = "mercator-agent"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
 
 [dependencies]
 anyhow = "1"
+base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
 directories = "6"
+ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8", "pem"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10"
 sysinfo = "0.39.3"
 thiserror = "2"
 time = { version = "0.3", features = ["formatting", "serde", "serde-well-known"] }
@@ -16,6 +21,7 @@ tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4"] }
 
 [target.'cfg(not(windows))'.dependencies]
 reqwest = { version = "0.12.28", default-features = false, features = ["json", "rustls-tls"] }
@@ -23,3 +29,6 @@ reqwest = { version = "0.12.28", default-features = false, features = ["json", "
 [target.'cfg(windows)'.dependencies]
 reqwest = { version = "0.12.28", default-features = false, features = ["json", "native-tls"] }
 windows-service = "0.8.1"
+
+[build-dependencies]
+dotenvy = "0.15"
