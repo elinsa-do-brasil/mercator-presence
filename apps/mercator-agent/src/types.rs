@@ -101,6 +101,7 @@ pub enum HeartbeatKind {
 /// e opcionalmente a geolocalização criptografada.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct HeartbeatRequest {
     pub kind: HeartbeatKind,
     /// O ID exclusivo do dispositivo (gerado pelo claim).
@@ -112,10 +113,12 @@ pub struct HeartbeatRequest {
     /// Informações sobre a versão do executável do agente.
     pub agent: AgentInfo,
     /// Dados de sistema operacional, CPU e memória.
+    #[serde(skip_serializing)]
     pub system: SystemInfo,
     /// Placas de rede ativas, MAC, IPs e conexão sem fio.
     pub network: NetworkInfo,
     /// Informações da bateria física do dispositivo.
+    #[serde(skip_serializing)]
     pub battery: BatteryInfo,
     /// Geolocalização protegida criptograficamente (opcional).
     #[serde(skip_serializing_if = "Option::is_none")]
